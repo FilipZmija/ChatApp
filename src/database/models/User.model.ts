@@ -4,13 +4,18 @@ import {
   InferAttributes,
   InferCreationAttributes,
   CreationOptional,
+  NonAttribute,
 } from "@sequelize/core";
 import {
   Attribute,
   PrimaryKey,
   AutoIncrement,
   NotNull,
+  BelongsToMany,
+  HasMany,
 } from "@sequelize/core/decorators-legacy";
+import { Room } from "./Room.model.js";
+import { Message } from "./Message.model.js";
 
 export class User extends Model<
   InferAttributes<User>,
@@ -23,8 +28,15 @@ export class User extends Model<
 
   @Attribute(DataTypes.STRING)
   @NotNull
-  declare firstName: string;
+  declare username: string;
 
   @Attribute(DataTypes.STRING)
-  declare lastName: string | null;
+  @NotNull
+  declare password: string;
+
+  @HasMany(() => Message, "userId")
+  declare message: NonAttribute<Message[]>;
+
+  @BelongsToMany(() => Room, { through: "RoomConnection" })
+  declare rooms?: NonAttribute<User[]>;
 }

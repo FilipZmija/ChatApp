@@ -1,12 +1,14 @@
 # Sequelize-TypeScript-Init
-This is a code sample of initialization of Sequelize v.7 ORM used with TypeScript.
+
+This code sample shows how to create JWT authentication and authorization with Sequelize v.7.0 TypeScript and socket.io
+
 ## Overview
+
 This project consists of:
+
 1. Node.ts server
 2. Sequelize v.7 ORM
 3. SQLite db
+4. Socket.io
 
-Goal of this project is to prepare init enviroment that any project can be started with.
-The code itself inits db file as well as example model. This also includes a helper function that imports all models exisitng in ./database/models directory.
-Model names need to specifically be named as the file *.model.ts where * is model name or they need to export default.
-  
+This project is extention of basic TS init project. With this project you are able to create user, login and authenticate with JWT token as well as user is authenticated for socket.io connection. So any time a socket connection is established a user is authenticated with JWT token and is granted access to the app.

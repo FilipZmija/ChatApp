@@ -5,6 +5,9 @@ declare global {
       NODE_ENV: string;
       DIALECT: "sqlite";
       STORAGE: string;
+      ORIGIN: string;
+      SECRET_TOKEN: string;
+      CLIENT_URI: string;
     }
   }
 }
