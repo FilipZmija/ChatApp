@@ -32,13 +32,17 @@ export class Message extends Model<
   @AutoIncrement
   declare id: CreationOptional<number>;
 
-  @Attribute(DataTypes.STRING)
+  @Attribute(DataTypes.INTEGER)
   @NotNull
   declare userId: number;
 
-  @Attribute(DataTypes.STRING)
+  @Attribute(DataTypes.INTEGER)
   @NotNull
   declare conversationId: number;
+
+  @Attribute(DataTypes.STRING)
+  @NotNull
+  declare content: string;
 
   @BelongsTo(() => User, "userId")
   declare user: NonAttribute<User>;

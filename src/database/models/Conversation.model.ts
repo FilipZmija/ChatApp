@@ -10,6 +10,7 @@ import {
   BelongsToManyAddAssociationsMixin,
   HasOneSetAssociationMixin,
   HasOneGetAssociationMixin,
+  HasOneCreateAssociationMixin,
 } from "@sequelize/core";
 import {
   Attribute,
@@ -19,6 +20,7 @@ import {
   HasMany,
   HasOne,
   BelongsToMany,
+  BelongsTo,
 } from "@sequelize/core/decorators-legacy";
 import { User } from "./User.model.js";
 import { Room } from "./Room.model.js";
@@ -33,13 +35,21 @@ export class Conversation extends Model<
   @AutoIncrement
   declare id: CreationOptional<number>;
 
+  @Attribute(DataTypes.STRING)
+  @NotNull
+  declare type: "room" | "user";
+
   @HasMany(() => Message, "conversationId")
   declare messages?: NonAttribute<Message>;
 
-  @BelongsToMany(() => User, { through: "UsersConversation" })
-  declare usersConversations: NonAttribute<Conversation[]>;
+  @HasOne(() => Room, "conversationId")
+  declare room: NonAttribute<Conversation>;
 
-  declare setUser: BelongsToManyAddAssociationMixin<Room, Room["id"]>;
-  declare setUsers: BelongsToManyAddAssociationsMixin<Room, Room["id"]>;
+  @BelongsToMany(() => User, { through: "UsersConversation" })
+  declare users?: NonAttribute<User[]>;
+
+  declare setUser: BelongsToManyAddAssociationMixin<User, User["id"]>;
+  declare setUsers: BelongsToManyAddAssociationsMixin<User, User["id"]>;
   declare getUsers: BelongsToManyGetAssociationsMixin<User>;
+  declare assignRoom: HasOneCreateAssociationMixin<Room, "conversationId">;
 }

@@ -8,6 +8,7 @@ import {
   BelongsToManyGetAssociationsMixin,
   BelongsToManyAddAssociationMixin,
   BelongsToManyAddAssociationsMixin,
+  HasOneCreateAssociationMixin,
 } from "@sequelize/core";
 import {
   Attribute,
@@ -15,6 +16,9 @@ import {
   AutoIncrement,
   NotNull,
   BelongsToMany,
+  HasOne,
+  BeforeCreate,
+  AfterCreate,
   BelongsTo,
 } from "@sequelize/core/decorators-legacy";
 import { User } from "./User.model.js";
@@ -33,8 +37,15 @@ export class Room extends Model<
   @NotNull
   declare name: string;
 
+  @Attribute(DataTypes.INTEGER)
+  declare conversationId: number | null;
+
   @BelongsToMany(() => User, { through: "RoomConnection" })
   declare users?: NonAttribute<User[]>;
+
+  @BelongsTo(() => Conversation, "conversationId")
+  declare conversation: NonAttribute<Conversation>;
+
   declare getUsers: BelongsToManyGetAssociationsMixin<User>;
   declare addUser: BelongsToManyAddAssociationMixin<User, User["id"]>;
   declare addUsers: BelongsToManyAddAssociationsMixin<User, User["id"]>;

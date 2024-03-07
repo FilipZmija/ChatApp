@@ -4,19 +4,19 @@ import { validateTokenSocket } from "../auth/JWT.js";
 import { User } from "../database/models/User.model.js";
 import { CustomSocket } from "../types/local/socketIo.js";
 import {
+  IRecipeint,
+  IRoom,
+  IRoomCreationData,
   TConversation,
   TMessage,
-  TRoom,
   TUser,
   TUserSockets,
 } from "../types/local/messaging.js";
-import {
-  Message,
-  askToJoinRoom,
-  sendMessage,
-  startConversation,
-} from "./messages.js";
+import { MessageInstance, sendMessage, startConversation } from "./messages.js";
 import { Room } from "../database/models/Room.model.js";
+import { sendActiveUsers } from "./users.js";
+import { Conversation } from "../database/models/Conversation.model.js";
+import { askToJoinRoom, createRoom } from "./rooms.js";
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -65,42 +65,52 @@ export class ServerSocket {
       }
     }
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       if (socket.user) {
         const userSockets = this.users[socket.user.id];
         const index = userSockets.indexOf(socket.id);
         userSockets.splice(index, 1);
+        if (userSockets.length === 0) {
+          delete this.users[socket.user.id];
+        }
+        setTimeout(() => {
+          userSockets.length === 0 && sendActiveUsers(this.users, socket);
+        }, 20000);
       }
     });
 
-    socket.on("message", () => {
-      socket.emit("users", this.users);
+    socket.on("getUsers", () => {
+      sendActiveUsers(this.users, socket);
     });
 
-    socket.on("createRoom", async (roomData: TRoom) => {
+    socket.on("createRoom", async (roomData: IRoomCreationData) => {
       if (socket.user) {
-        const { name: roomName, users } = roomData;
         const { name: userName, id } = socket.user;
-        const user: TUser = { id, name: userName };
-        const room = await Room.create({ name: roomName });
-        await room.addUsers([id, ...users]);
-
-        const conversation: TConversation = {
-          id: room.id,
-          type: "room",
-          name: roomName,
-        };
-        const creationMessage: TMessage = {
-          to: conversation,
-          message: {
-            type: "system",
-            content: `${socket.user.name} created a group chat`,
-          },
-        };
-        const message = new Message(creationMessage, user);
-
-        message.setRecipient(this.users, users);
-        askToJoinRoom(message, socket);
+        const { name: roomName, users } = roomData;
+        const room = await createRoom(roomData, id);
+        if (room) {
+          const conversation: IRoom = {
+            id: room.conversationId,
+            roomId: room.id,
+            type: "room",
+            name: roomName,
+          };
+          const creationMessage: TMessage = {
+            to: conversation,
+            message: {
+              type: "system",
+              content: `${socket.user.name} created a group chat`,
+            },
+          };
+          const user: TUser = { id, name: userName };
+          const message = new MessageInstance(creationMessage, user);
+          message.setRecipient(this.users, users);
+          askToJoinRoom(message, socket);
+        } else {
+          socket.emit("error", {
+            message: "Could not create a room, please try later",
+          });
+        }
       }
     });
 
@@ -111,8 +121,22 @@ export class ServerSocket {
     socket.on("sendMessage", async (recivedMessage: TMessage) => {
       if (socket.user) {
         const user: TUser = { id: socket.user.id, name: socket.user.name };
-        const message = new Message(recivedMessage, user);
+        const message = new MessageInstance(recivedMessage, user);
+        if (!recivedMessage.to.id && message.to.type === "user") {
+          const recipient: IRecipeint = message.to;
+          try {
+            const conversation = await startConversation(recipient, user);
+            if (typeof conversation !== "string") {
+              message.updateRecipientsId(conversation.id);
+            } else {
+              throw new Error(conversation);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
         await message.setRecipient(this.users);
+        await message.saveMessage();
         sendMessage(message, socket);
       }
     });
