@@ -8,6 +8,7 @@ export const sendActiveUsers = async (
 ) => {
   if (socket.user) {
     const { id } = socket.user;
+
     const users = await Promise.all(
       Object.keys(userSockets).map((key) => User.findByPk(key))
     );

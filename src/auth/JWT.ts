@@ -4,8 +4,8 @@ import { Response, NextFunction, Request } from "express";
 import { CustomSocket } from "../types/local/socketIo.js";
 
 export const createToken = (user: User): string => {
-  const { username, id } = user;
-  const accessToken = jwt.sign({ username, id }, process.env.SECRET_TOKEN);
+  const { name, id } = user;
+  const accessToken = jwt.sign({ name, id }, process.env.SECRET_TOKEN);
   return accessToken;
 };
 
@@ -28,7 +28,7 @@ export const validateTokenApi = (
         return;
       }
       if (typeof decoded === "object" && decoded !== null && "id" in decoded) {
-        req.user = { id: decoded.id, username: decoded.username };
+        req.user = { id: decoded.id, name: decoded.name };
         next();
       }
     });
@@ -39,38 +39,12 @@ export const validateTokenApi = (
   }
 };
 
-// export const validateTokenSocket = (socket: CustomSocket, next: any) => {
-//   if (socket.handshake.auth && socket.handshake.auth.token) {
-//     const accessToken: string = Array.isArray(socket.handshake.auth.token)
-//       ? socket.handshake.auth.token[0]
-//       : socket.handshake.auth.token;
-//     console.log(socket.handshake.auth.token);
-//     jwt.verify(accessToken, process.env.SECRET_TOKEN, (err, decoded) => {
-//       if (err) {
-//         next(new Error("Invalid token"));
-//         console.log(err);
-//         socket.emit("validation", "Invalid token!");
-//         return;
-//       }
-//       if (typeof decoded === "object" && decoded !== null && "id" in decoded) {
-//         socket.user = { id: decoded.id, name: decoded.username };
-//         const data = {
-//           message: "User has been connected!",
-//           id: socket.id,
-//         };
-//         socket.emit("validation", data);
-//         next();
-//       }
-//     });
-//   }
-// };
-
 export const validateTokenSocket = (socket: CustomSocket, next: any) => {
-  if (socket.handshake.query && socket.handshake.query.token) {
-    const accessToken: string = Array.isArray(socket.handshake.query.token)
-      ? socket.handshake.query.token[0]
-      : socket.handshake.query.token;
-    console.log(accessToken);
+  if (socket.handshake.auth && socket.handshake.auth.token) {
+    const accessToken: string = Array.isArray(socket.handshake.auth.token)
+      ? socket.handshake.auth.token[0]
+      : socket.handshake.auth.token;
+    console.log(socket.handshake.auth.token);
     jwt.verify(accessToken, process.env.SECRET_TOKEN, (err, decoded) => {
       if (err) {
         next(new Error("Invalid token"));
@@ -79,7 +53,7 @@ export const validateTokenSocket = (socket: CustomSocket, next: any) => {
         return;
       }
       if (typeof decoded === "object" && decoded !== null && "id" in decoded) {
-        socket.user = { id: decoded.id, name: decoded.username };
+        socket.user = { id: decoded.id, name: decoded.name };
         const data = {
           message: "User has been connected!",
           id: socket.id,

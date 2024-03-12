@@ -11,18 +11,15 @@ router.use((req, res, next) => {
 });
 
 router.post("/register", async (req, res) => {
-  const { username, password }: { username: string; password: string } =
-    req.body;
+  const { name, password }: { name: string; password: string } = req.body;
   try {
-    const user = await User.findOne({ where: { username } });
+    const user = await User.findOne({ where: { name } });
     if (!user) {
       const hash = await bcrypt.hash(password, 10);
-      await User.create({ username, password: hash });
+      await User.create({ name, password: hash });
       res.status(200).json({ message: "You have registered succesfully" });
     } else {
-      res
-        .status(400)
-        .json({ message: "User with this username already exists" });
+      res.status(400).json({ message: "User with this name already exists" });
     }
   } catch (e) {
     console.error(e);
@@ -31,10 +28,9 @@ router.post("/register", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
-  const { username, password }: { username: string; password: string } =
-    req.body;
+  const { name, password }: { name: string; password: string } = req.body;
   try {
-    const user = await User.findOne({ where: { username: username } });
+    const user = await User.findOne({ where: { name: name } });
     if (!user) return res.status(404).json({ message: "User does not exist" });
     const hashPassword = await bcrypt.compare(password, user.password);
     if (!hashPassword)
@@ -43,7 +39,8 @@ router.post("/login", async (req, res) => {
     res.json({
       message: "User logged in successfully",
       accessToken: accessToken,
-      username: user.username,
+      name: user.name,
+      id: user.id,
     });
   } catch (e) {
     console.error(e);

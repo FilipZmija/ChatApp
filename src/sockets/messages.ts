@@ -2,24 +2,23 @@ import { literal } from "@sequelize/core";
 import { Conversation } from "../database/models/Conversation.model.js";
 import { User } from "../database/models/User.model.js";
 import {
-  TMessage,
+  IMessage,
   TUser,
   TUserSockets,
-  IRecipeint,
-  IRoom,
-  ISimpleMessage,
+  IConversationRecipeint,
+  IConversationRoom,
 } from "../types/local/messaging.js";
 import { CustomSocket } from "../types/local/socketIo.js";
 import { Message } from "../database/models/Message.model.js";
 import { ISucessError } from "../types/local/Info.js";
 
 export class MessageInstance {
-  to: IRecipeint | IRoom;
-  message: { type: "message" | "system"; content: string };
+  to: IConversationRecipeint | IConversationRoom;
+  message: { type: "message" | "system"; content: string; id?: number };
   sendTo: string | string[] | undefined;
   from: TUser;
 
-  constructor(message: TMessage, user: TUser) {
+  constructor(message: IMessage, user: TUser) {
     this.to = message.to;
     this.message = message.message;
     this.sendTo = undefined;
@@ -55,11 +54,12 @@ export class MessageInstance {
     const { content } = this.message;
     if (conversationId) {
       try {
-        await Message.create({
+        const savedMessage = await Message.create({
           userId,
           conversationId,
           content,
         });
+        this.message.id = savedMessage.id;
         return { status: true, message: "Message saved successfully" };
       } catch (e) {
         console.error(e);
@@ -87,28 +87,36 @@ export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
   }
 };
 
+export const findConvesationByTwoUsers = async (ids: number[]) => {
+  const user = await User.findByPk(ids[0]);
+  if (user) {
+    const existingConvsation = await user.getConversations({
+      where: {
+        "$users.id$": ids[1],
+      },
+      include: ["users", "messages"],
+    });
+    if (existingConvsation[0])
+      return { recipient: user, conversation: existingConvsation[0] };
+    else return { recipient: user, conversation: null };
+  }
+};
+
 export const startConversation = async (
-  recipeint: IRecipeint,
+  recipeint: IConversationRecipeint,
   user: TUser
-): Promise<Conversation | string> => {
+): Promise<{ recipient: User; conversation: Conversation } | string> => {
   const { type, userId } = recipeint;
   const { id } = user;
   try {
-    const user = await User.findByPk(id);
-    if (user) {
-      const existingConvsation = await user.getConversations({
-        where: {
-          "$users.id$": userId,
-        },
-        include: ["users"],
-      });
-      console.log(existingConvsation[0].id);
-      if (existingConvsation[0]) return existingConvsation[0];
-    }
-    const conversation = await Conversation.create({ type });
-    if (userId) {
-      await conversation.setUsers([id, userId]);
-      return conversation;
+    const existingConvsation = await findConvesationByTwoUsers([id, userId]);
+    if (existingConvsation) {
+      if (existingConvsation.conversation) return existingConvsation;
+      const conversation = await Conversation.create({ type });
+      if (userId) {
+        await conversation.setUsers([id, userId]);
+        return { recipient: existingConvsation.recipient, conversation };
+      } else return "Something went wrong";
     } else return "Something went wrong";
   } catch (e) {
     console.error(e);

@@ -4,18 +4,16 @@ import { validateTokenSocket } from "../auth/JWT.js";
 import { User } from "../database/models/User.model.js";
 import { CustomSocket } from "../types/local/socketIo.js";
 import {
-  IRecipeint,
-  IRoom,
+  IMessage,
+  IConversationRecipeint,
+  IConversationRoom,
   IRoomCreationData,
-  TConversation,
-  TMessage,
   TUser,
   TUserSockets,
 } from "../types/local/messaging.js";
 import { MessageInstance, sendMessage, startConversation } from "./messages.js";
 import { Room } from "../database/models/Room.model.js";
 import { sendActiveUsers } from "./users.js";
-import { Conversation } from "../database/models/Conversation.model.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 
 export class ServerSocket {
@@ -73,36 +71,40 @@ export class ServerSocket {
         if (userSockets.length === 0) {
           delete this.users[socket.user.id];
         }
+        console.log("disconext");
+        console.log(userSockets);
         setTimeout(() => {
-          userSockets.length === 0 && sendActiveUsers(this.users, socket);
-        }, 20000);
+          socket.user &&
+            !this.users[socket.user.id] &&
+            sendActiveUsers(this.users, socket);
+        }, 2000);
       }
     });
-
+    console.log(this.users);
     socket.on("getUsers", () => {
       sendActiveUsers(this.users, socket);
     });
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {
       if (socket.user) {
-        const { name: userName, id } = socket.user;
+        const { name: name, id } = socket.user;
         const { name: roomName, users } = roomData;
         const room = await createRoom(roomData, id);
         if (room) {
-          const conversation: IRoom = {
+          const conversation: IConversationRoom = {
             id: room.conversationId,
             roomId: room.id,
             type: "room",
             name: roomName,
           };
-          const creationMessage: TMessage = {
+          const creationMessage: IMessage = {
             to: conversation,
             message: {
               type: "system",
               content: `${socket.user.name} created a group chat`,
             },
           };
-          const user: TUser = { id, name: userName };
+          const user: TUser = { id, name: name };
           const message = new MessageInstance(creationMessage, user);
           message.setRecipient(this.users, users);
           askToJoinRoom(message, socket);
@@ -118,18 +120,18 @@ export class ServerSocket {
       socket.join("room" + data.id);
     });
 
-    socket.on("sendMessage", async (recivedMessage: TMessage) => {
+    socket.on("sendMessage", async (recivedMessage: IMessage) => {
       if (socket.user) {
         const user: TUser = { id: socket.user.id, name: socket.user.name };
         const message = new MessageInstance(recivedMessage, user);
-        if (!recivedMessage.to.id && message.to.type === "user") {
-          const recipient: IRecipeint = message.to;
+        if (!message.to?.id && message.to?.type === "user") {
+          const recipient: IConversationRecipeint = message.to;
           try {
-            const conversation = await startConversation(recipient, user);
-            if (typeof conversation !== "string") {
-              message.updateRecipientsId(conversation.id);
+            const conversationData = await startConversation(recipient, user);
+            if (typeof conversationData !== "string") {
+              message.updateRecipientsId(conversationData.conversation.id);
             } else {
-              throw new Error(conversation);
+              throw new Error(conversationData);
             }
           } catch (e) {
             console.error(e);
