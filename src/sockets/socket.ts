@@ -5,16 +5,16 @@ import { User } from "../database/models/User.model.js";
 import { CustomSocket } from "../types/local/socketIo.js";
 import {
   IMessage,
-  IConversationRecipeint,
-  IConversationRoom,
+  IConversation,
   IRoomCreationData,
   TUser,
   TUserSockets,
 } from "../types/local/messaging.js";
-import { MessageInstance, sendMessage, startConversation } from "./messages.js";
+import { MessageInstance, sendMessage } from "./messages.js";
 import { Room } from "../database/models/Room.model.js";
 import { sendActiveUsers } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
+import { startConversation } from "./conversations.js";
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -91,9 +91,9 @@ export class ServerSocket {
         const { name: roomName, users } = roomData;
         const room = await createRoom(roomData, id);
         if (room) {
-          const conversation: IConversationRoom = {
+          const conversation: IConversation = {
             id: room.conversationId,
-            roomId: room.id,
+            childId: room.id,
             type: "room",
             name: roomName,
           };
@@ -125,7 +125,7 @@ export class ServerSocket {
         const user: TUser = { id: socket.user.id, name: socket.user.name };
         const message = new MessageInstance(recivedMessage, user);
         if (!message.to?.id && message.to?.type === "user") {
-          const recipient: IConversationRecipeint = message.to;
+          const recipient: IConversation = message.to;
           try {
             const conversationData = await startConversation(recipient, user);
             if (typeof conversationData !== "string") {

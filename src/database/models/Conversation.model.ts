@@ -43,7 +43,7 @@ export class Conversation extends Model<
   declare messages?: NonAttribute<Message>;
 
   @HasOne(() => Room, "conversationId")
-  declare room: NonAttribute<Conversation>;
+  declare room: NonAttribute<Room>;
 
   @BelongsToMany(() => User, { through: "UsersConversation" })
   declare users?: NonAttribute<User[]>;

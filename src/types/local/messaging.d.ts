@@ -2,17 +2,11 @@ export interface TUserSockets {
   [id: string]: string[];
 }
 
-export interface IConversationRecipeint {
+export interface IConversation {
   id: number | null;
-  userId: number;
-  type: "user";
-}
-
-export interface IConversationRoom {
-  id: number | null;
-  name: string;
-  roomId: number;
-  type: "room";
+  childId: number;
+  type: "room" | "user";
+  name?: string;
 }
 
 export interface TUser {
@@ -21,7 +15,7 @@ export interface TUser {
 }
 
 export interface IMessage {
-  to: IConversationRecipeint | IConversationRoom;
+  to: IConversation;
   message: { type: "message" | "system"; content: string };
 }
 

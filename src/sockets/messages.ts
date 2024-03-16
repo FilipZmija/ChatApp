@@ -5,15 +5,14 @@ import {
   IMessage,
   TUser,
   TUserSockets,
-  IConversationRecipeint,
-  IConversationRoom,
+  IConversation,
 } from "../types/local/messaging.js";
 import { CustomSocket } from "../types/local/socketIo.js";
 import { Message } from "../database/models/Message.model.js";
 import { ISucessError } from "../types/local/Info.js";
 
 export class MessageInstance {
-  to: IConversationRecipeint | IConversationRoom;
+  to: IConversation;
   message: { type: "message" | "system"; content: string; id?: number };
   sendTo: string | string[] | undefined;
   from: TUser;
@@ -80,46 +79,14 @@ export class MessageInstance {
 }
 
 export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
-  const eventName = message.to.type + message.from.id;
+  let eventName = message.to.type;
+  if (message.to.type === "user") {
+    eventName += message.from.id;
+  } else {
+    eventName += message.to.id;
+  }
   if (typeof message.sendTo !== "undefined") {
     socket.to(message.sendTo).emit("message", message.messageBody);
     socket.to(message.sendTo).emit(eventName, message.messageBody);
-  }
-};
-
-export const findConvesationByTwoUsers = async (ids: number[]) => {
-  const user = await User.findByPk(ids[0]);
-  if (user) {
-    const existingConvsation = await user.getConversations({
-      where: {
-        "$users.id$": ids[1],
-      },
-      include: ["users", "messages"],
-    });
-    if (existingConvsation[0])
-      return { recipient: user, conversation: existingConvsation[0] };
-    else return { recipient: user, conversation: null };
-  }
-};
-
-export const startConversation = async (
-  recipeint: IConversationRecipeint,
-  user: TUser
-): Promise<{ recipient: User; conversation: Conversation } | string> => {
-  const { type, userId } = recipeint;
-  const { id } = user;
-  try {
-    const existingConvsation = await findConvesationByTwoUsers([id, userId]);
-    if (existingConvsation) {
-      if (existingConvsation.conversation) return existingConvsation;
-      const conversation = await Conversation.create({ type });
-      if (userId) {
-        await conversation.setUsers([id, userId]);
-        return { recipient: existingConvsation.recipient, conversation };
-      } else return "Something went wrong";
-    } else return "Something went wrong";
-  } catch (e) {
-    console.error(e);
-    return "Something went wrong";
   }
 };
