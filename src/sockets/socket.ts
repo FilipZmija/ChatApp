@@ -107,7 +107,7 @@ export class ServerSocket {
           const user: TUser = { id, name: name };
           const message = new MessageInstance(creationMessage, user);
           message.setRecipient(this.users, users);
-          askToJoinRoom(message, socket);
+          askToJoinRoom(message, conversation, socket);
         } else {
           socket.emit("error", {
             message: "Could not create a room, please try later",
@@ -139,6 +139,8 @@ export class ServerSocket {
         }
         await message.setRecipient(this.users);
         await message.saveMessage();
+        console.log(message);
+
         sendMessage(message, socket);
       }
     });

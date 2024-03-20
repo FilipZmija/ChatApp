@@ -8,7 +8,7 @@ import {
   BelongsToManyGetAssociationsMixin,
   BelongsToManyAddAssociationMixin,
   BelongsToManyAddAssociationsMixin,
-  HasOneCreateAssociationMixin,
+  BelongsToGetAssociationMixin,
 } from "@sequelize/core";
 import {
   Attribute,
@@ -49,4 +49,5 @@ export class Room extends Model<
   declare getUsers: BelongsToManyGetAssociationsMixin<User>;
   declare addUser: BelongsToManyAddAssociationMixin<User, User["id"]>;
   declare addUsers: BelongsToManyAddAssociationsMixin<User, User["id"]>;
+  declare getConversation: BelongsToGetAssociationMixin<Conversation>;
 }

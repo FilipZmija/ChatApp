@@ -8,8 +8,7 @@ import {
   BelongsToManyGetAssociationsMixin,
   BelongsToManyAddAssociationMixin,
   BelongsToManyAddAssociationsMixin,
-  HasOneSetAssociationMixin,
-  HasOneGetAssociationMixin,
+  HasManyGetAssociationsMixin,
   HasOneCreateAssociationMixin,
 } from "@sequelize/core";
 import {
@@ -40,7 +39,7 @@ export class Conversation extends Model<
   declare type: "room" | "user";
 
   @HasMany(() => Message, "conversationId")
-  declare messages?: NonAttribute<Message>;
+  declare messages?: NonAttribute<Message[]>;
 
   @HasOne(() => Room, "conversationId")
   declare room: NonAttribute<Room>;
@@ -49,7 +48,8 @@ export class Conversation extends Model<
   declare users?: NonAttribute<User[]>;
 
   declare setUser: BelongsToManyAddAssociationMixin<User, User["id"]>;
-  declare setUsers: BelongsToManyAddAssociationsMixin<User, User["id"]>;
+  declare addUsers: BelongsToManyAddAssociationsMixin<User, User["id"]>;
   declare getUsers: BelongsToManyGetAssociationsMixin<User>;
   declare assignRoom: HasOneCreateAssociationMixin<Room, "conversationId">;
+  declare getMessages: HasManyGetAssociationsMixin<Message>;
 }

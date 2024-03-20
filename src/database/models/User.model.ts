@@ -46,4 +46,5 @@ export class User extends Model<
   declare conversations?: NonAttribute<Conversation[]>;
 
   declare getConversations: BelongsToManyGetAssociationsMixin<Conversation>;
+  declare getRooms: BelongsToManyGetAssociationsMixin<Room>;
 }

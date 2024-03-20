@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { User } from "../database/models/User.model.js";
 import { Response, Request } from "express";
 import { validateTokenApi, createToken } from "../auth/JWT.js";
+import { Op } from "@sequelize/core";
 const router = express.Router();
 
 router.use(express.json({ limit: "10mb" }));
@@ -60,6 +61,22 @@ router.get("/data", validateTokenApi, async (req: Request, res: Response) => {
       res.status(200).json({ user });
     } else {
       res.status(404).json({ message: "User does not exist" });
+    }
+  } catch (e) {
+    res.status(400).json({ e });
+  }
+});
+
+router.get("/all", validateTokenApi, async (req: Request, res: Response) => {
+  try {
+    const users = await User.findAll({
+      where: { id: { [Op.ne]: req.user.id } },
+      attributes: { exclude: ["password"] },
+    });
+    if (users) {
+      res.status(200).json({ users });
+    } else {
+      res.status(404).json({ message: "No users exist" });
     }
   } catch (e) {
     res.status(400).json({ e });

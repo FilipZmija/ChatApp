@@ -1,4 +1,5 @@
 import { Conversation } from "../database/models/Conversation.model.js";
+import { Message } from "../database/models/Message.model.js";
 import { User } from "../database/models/User.model.js";
 import { IConversation, TUser } from "../types/local/messaging.js";
 
@@ -7,9 +8,15 @@ export class ConversationNote implements IConversation {
   childId: number;
   type: "room" | "user";
   name?: string;
+  lastMessage?: Message;
   constructor(conversation: Conversation) {
     this.id = conversation.id;
     this.type = conversation.type;
+
+    if (conversation.messages) {
+      this.lastMessage = conversation.messages[0];
+    }
+
     if (conversation.type === "user" && conversation.users) {
       this.name = conversation.users[0].name;
       this.childId = conversation.users[0].id;
@@ -47,7 +54,7 @@ export const startConversation = async (
       if (existingConvsation.conversation) return existingConvsation;
       const conversation = await Conversation.create({ type });
       if (childId) {
-        await conversation.setUsers([id, childId]);
+        await conversation.addUsers([id, childId]);
         return { recipient: existingConvsation.recipient, conversation };
       } else return "Something went wrong";
     } else return "Something went wrong";

@@ -6,6 +6,10 @@ import {
   ConversationNote,
   findConvesationByTwoUsers,
 } from "../sockets/conversations.js";
+import { Op } from "@sequelize/core";
+import { Room } from "../database/models/Room.model.js";
+import { Message } from "../database/models/Message.model.js";
+import { UsersConversation } from "../database/models/UsersConversation.model.js";
 
 const router = express.Router();
 router.get("/user/:id", validateTokenApi, async (req, res) => {
@@ -27,12 +31,20 @@ router.get("/all", validateTokenApi, async (req, res) => {
   try {
     const user = await User.findByPk(id);
     const conversations = await user?.getConversations({
-      include: [{ model: User }],
+      include: [
+        { model: Message },
+        { model: Room },
+        { model: User, where: { id: { [Op.ne]: id } } },
+      ],
+      order: [[Message, "createdAt", "DESC"]],
     });
-    const conversatiosnNote = conversations?.map(
-      (conversation) => new ConversationNote(conversation)
-    );
-    res.status(200).send(conversatiosnNote);
+
+    if (conversations) {
+      const conversatiosnNote = conversations.map(
+        (conversation) => new ConversationNote(conversation)
+      );
+      res.status(200).send(conversatiosnNote);
+    }
   } catch (err) {
     console.log(err);
     res.status(404).send({ err });
@@ -42,21 +54,14 @@ router.get("/all", validateTokenApi, async (req, res) => {
 router.get("/room/:id", async (req, res) => {
   const id = req.params.id;
   try {
-    const conversation = await Conversation.findOne({
-      where: { id },
+    const room = await Room.findByPk(id);
+    const conversation = await room?.getConversation({
       include: [
-        {
-          association: "room",
-          include: [
-            { association: "users", attributes: { exclude: ["password"] } },
-          ],
-        },
-        {
-          association: "messages",
-        },
+        { model: Message },
+        { model: User, attributes: { exclude: ["password"] } },
       ],
     });
-    res.status(200).send({ conversation });
+    res.status(200).send({ conversation, recipient: room });
   } catch (err) {
     console.log(err);
     res.status(404).send({ err });

@@ -1,6 +1,4 @@
-import { literal } from "@sequelize/core";
 import { Conversation } from "../database/models/Conversation.model.js";
-import { User } from "../database/models/User.model.js";
 import {
   IMessage,
   TUser,
@@ -23,7 +21,6 @@ export class MessageInstance {
     this.sendTo = undefined;
     this.from = user;
   }
-
   updateRecipientsId(id: number) {
     this.to.id = id;
   }
@@ -32,9 +29,9 @@ export class MessageInstance {
     recipients: TUserSockets,
     users?: number[] | Conversation
   ) {
-    const { type, id } = this.to;
+    const { type, childId, id } = this.to;
     if (type === "room" && typeof users === "undefined") {
-      this.sendTo = "room" + id;
+      this.sendTo = "room" + childId;
     } else if (type === "user" && typeof users === "undefined") {
       const conversation = await Conversation.findByPk(id);
       if (conversation) {
@@ -44,6 +41,7 @@ export class MessageInstance {
       }
     } else if (Array.isArray(users)) {
       this.sendTo = users.map((id) => recipients[id]).flat();
+      console.log(this.sendTo);
     }
   }
 
@@ -83,8 +81,9 @@ export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
   if (message.to.type === "user") {
     eventName += message.from.id;
   } else {
-    eventName += message.to.id;
+    eventName += message.to.childId;
   }
+
   if (typeof message.sendTo !== "undefined") {
     socket.to(message.sendTo).emit("message", message.messageBody);
     socket.to(message.sendTo).emit(eventName, message.messageBody);

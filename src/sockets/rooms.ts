@@ -1,17 +1,19 @@
-import { attribute } from "@sequelize/core/_non-semver-use-at-your-own-risk_/expression-builders/attribute.js";
 import { Room } from "../database/models/Room.model.js";
-import { ISucessError } from "../types/local/Info.js";
-import { IRoomCreationData } from "../types/local/messaging.js";
+import { IConversation, IRoomCreationData } from "../types/local/messaging.js";
 import { CustomSocket } from "../types/local/socketIo.js";
 import { MessageInstance } from "./messages.js";
 import { Conversation } from "../database/models/Conversation.model.js";
 
 export const askToJoinRoom = (
   message: MessageInstance,
+  conversation: IConversation,
   socket: CustomSocket
 ) => {
-  if (typeof message.sendTo !== "undefined") {
-    socket.to(message.sendTo).emit("joinRoom", message.messageBody);
+  message.saveMessage();
+  if (message.sendTo) {
+    socket.to(message.sendTo).emit("joinRoom", conversation);
+    socket.emit("joinRoom", conversation);
+    socket.to("room" + message.to.childId).emit("joinRoom", conversation);
   }
 };
 
@@ -27,6 +29,7 @@ export const createRoom = async (
       conversationId: conversation.id,
     });
     await room.addUsers([userId, ...users]);
+    await conversation.addUsers([userId, ...users]);
     return room;
   } catch (err) {
     console.log(err);
