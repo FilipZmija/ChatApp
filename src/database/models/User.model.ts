@@ -5,6 +5,7 @@ import {
   InferCreationAttributes,
   CreationOptional,
   NonAttribute,
+  BelongsToManyGetAssociationsMixin,
 } from "@sequelize/core";
 import {
   Attribute,
@@ -16,6 +17,7 @@ import {
 } from "@sequelize/core/decorators-legacy";
 import { Room } from "./Room.model.js";
 import { Message } from "./Message.model.js";
+import { Conversation } from "./Conversation.model.js";
 
 export class User extends Model<
   InferAttributes<User>,
@@ -28,7 +30,7 @@ export class User extends Model<
 
   @Attribute(DataTypes.STRING)
   @NotNull
-  declare username: string;
+  declare name: string;
 
   @Attribute(DataTypes.STRING)
   @NotNull
@@ -39,4 +41,10 @@ export class User extends Model<
 
   @BelongsToMany(() => Room, { through: "RoomConnection" })
   declare rooms?: NonAttribute<User[]>;
+
+  @BelongsToMany(() => Conversation, { through: "UsersConversation" })
+  declare conversations?: NonAttribute<Conversation[]>;
+
+  declare getConversations: BelongsToManyGetAssociationsMixin<Conversation>;
+  declare getRooms: BelongsToManyGetAssociationsMixin<Room>;
 }
