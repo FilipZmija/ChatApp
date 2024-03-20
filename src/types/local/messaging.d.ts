@@ -1,10 +1,11 @@
 export interface TUserSockets {
-  [id: number]: string[];
+  [id: string]: string[];
 }
 
-export interface TConversation {
-  id: number;
-  type: "user" | "room";
+export interface IConversation {
+  id: number | null;
+  childId: number;
+  type: "room" | "user";
   name?: string;
 }
 
@@ -13,12 +14,18 @@ export interface TUser {
   name: string;
 }
 
-export interface TMessage {
-  to: TConversation;
+export interface IMessage {
+  to: IConversation;
   message: { type: "message" | "system"; content: string };
 }
 
-export interface TRoom {
+export interface ISimpleMessage {
+  type: "message" | "system";
+  content: string;
+  id: number;
+}
+
+export interface IRoomCreationData {
   name: string;
   users: number[];
 }
