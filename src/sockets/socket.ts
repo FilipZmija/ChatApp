@@ -10,7 +10,11 @@ import {
   TUser,
   TUserSockets,
 } from "../types/local/messaging.js";
-import { MessageInstance, sendMessage } from "./messages.js";
+import {
+  MessageInstance,
+  sendConfirmationMessage,
+  sendMessage,
+} from "./messages.js";
 import { Room } from "../database/models/Room.model.js";
 import { sendActiveUsers } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
@@ -102,11 +106,12 @@ export class ServerSocket {
             message: {
               type: "system",
               content: `${socket.user.name} created a group chat`,
+              status: "sent",
             },
           };
           const user: TUser = { id, name: name };
           const message = new MessageInstance(creationMessage, user);
-          message.setRecipient(this.users, users);
+          await message.setRecipient(this.users, users);
           askToJoinRoom(message, conversation, socket);
         } else {
           socket.emit("error", {
@@ -116,8 +121,8 @@ export class ServerSocket {
       }
     });
 
-    socket.on("joinRoom", async (data) => {
-      socket.join("room" + data.id);
+    socket.on("joinRoom", async (childId) => {
+      socket.join("room" + childId);
     });
 
     socket.on("sendMessage", async (recivedMessage: IMessage) => {
@@ -137,10 +142,11 @@ export class ServerSocket {
             console.error(e);
           }
         }
-        await message.setRecipient(this.users);
-        await message.saveMessage();
-        console.log(message);
-
+        const conversation = await message.setRecipient(this.users);
+        const { status } = await message.saveMessage();
+        if (conversation) {
+          sendConfirmationMessage(message, conversation, socket, status);
+        }
         sendMessage(message, socket);
       }
     });

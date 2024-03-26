@@ -3,7 +3,7 @@ import { Conversation } from "../database/models/Conversation.model.js";
 import { validateTokenApi } from "../auth/JWT.js";
 import { User } from "../database/models/User.model.js";
 import {
-  ConversationNote,
+  ConversationCard,
   findConvesationByTwoUsers,
 } from "../sockets/conversations.js";
 import { Op } from "@sequelize/core";
@@ -32,7 +32,7 @@ router.get("/all", validateTokenApi, async (req, res) => {
     const user = await User.findByPk(id);
     const conversations = await user?.getConversations({
       include: [
-        { model: Message },
+        { model: Message, limit: 1, include: { association: "user" } },
         { model: Room },
         { model: User, where: { id: { [Op.ne]: id } } },
       ],
@@ -41,7 +41,7 @@ router.get("/all", validateTokenApi, async (req, res) => {
 
     if (conversations) {
       const conversatiosnNote = conversations.map(
-        (conversation) => new ConversationNote(conversation)
+        (conversation) => new ConversationCard(conversation)
       );
       res.status(200).send(conversatiosnNote);
     }
