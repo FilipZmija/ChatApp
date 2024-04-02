@@ -6,7 +6,7 @@ import {
   ConversationCard,
   findConvesationByTwoUsers,
 } from "../sockets/conversations.js";
-import { Op } from "@sequelize/core";
+import Sequelize, { Op } from "@sequelize/core";
 import { Room } from "../database/models/Room.model.js";
 import { Message } from "../database/models/Message.model.js";
 import { UsersConversation } from "../database/models/UsersConversation.model.js";
@@ -32,15 +32,28 @@ router.get("/all", validateTokenApi, async (req, res) => {
     const user = await User.findByPk(id);
     const conversations = await user?.getConversations({
       include: [
-        { model: Message, limit: 1, include: { association: "user" } },
+        {
+          model: Message,
+          include: { association: "user" },
+          order: [["createdAt", "DESC"]],
+          separate: true,
+
+          limit: 1,
+        },
         { model: Room },
         { model: User, where: { id: { [Op.ne]: id } } },
       ],
-      order: [[Message, "createdAt", "DESC"]],
     });
 
     if (conversations) {
-      const conversatiosnNote = conversations.map(
+      //sorting by myself since applying limit to getConversation messes up with  DB and i get an error "messages.createdAt" does not exist
+      const sortedConversations = conversations.sort((a, b) => {
+        return a.messages && b.messages
+          ? b.messages[0].createdAt.getTime() -
+              a.messages[0].createdAt.getTime()
+          : 0;
+      });
+      const conversatiosnNote = sortedConversations.map(
         (conversation) => new ConversationCard(conversation)
       );
       res.status(200).send(conversatiosnNote);

@@ -20,6 +20,9 @@ export class Message extends Model<
   InferAttributes<Message>,
   InferCreationAttributes<Message>
 > {
+  declare createdAt: CreationOptional<Date>;
+  declare updatedAt: CreationOptional<Date>;
+
   @Attribute(DataTypes.INTEGER)
   @PrimaryKey
   @AutoIncrement
