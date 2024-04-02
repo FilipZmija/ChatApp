@@ -16,7 +16,7 @@ import {
   sendMessage,
 } from "./messages.js";
 import { Room } from "../database/models/Room.model.js";
-import { sendActiveUsers } from "./users.js";
+import { sendActiveUsers, sendUsers } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
 
@@ -81,12 +81,13 @@ export class ServerSocket {
           socket.user &&
             !this.users[socket.user.id] &&
             sendActiveUsers(this.users, socket);
-        }, 2000);
+        }, 10000);
       }
     });
     console.log(this.users);
-    socket.on("getUsers", () => {
-      sendActiveUsers(this.users, socket);
+    socket.on("getUsers", async () => {
+      await sendActiveUsers(this.users, socket);
+      await sendUsers(socket, this.users);
     });
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {
