@@ -5,28 +5,24 @@ import {
   InferCreationAttributes,
   CreationOptional,
   NonAttribute,
-  BelongsToManyGetAssociationsMixin,
-  BelongsToManyAddAssociationMixin,
-  BelongsToManyAddAssociationsMixin,
 } from "@sequelize/core";
 import {
   Attribute,
   PrimaryKey,
   AutoIncrement,
   NotNull,
-  HasMany,
-  HasOne,
-  BelongsToMany,
   BelongsTo,
 } from "@sequelize/core/decorators-legacy";
 import { User } from "./User.model.js";
-import { Room } from "./Room.model.js";
 import { Conversation } from "./Conversation.model.js";
 
 export class Message extends Model<
   InferAttributes<Message>,
   InferCreationAttributes<Message>
 > {
+  declare createdAt: CreationOptional<Date>;
+  declare updatedAt: CreationOptional<Date>;
+
   @Attribute(DataTypes.INTEGER)
   @PrimaryKey
   @AutoIncrement

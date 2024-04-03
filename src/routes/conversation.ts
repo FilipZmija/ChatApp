@@ -3,10 +3,10 @@ import { Conversation } from "../database/models/Conversation.model.js";
 import { validateTokenApi } from "../auth/JWT.js";
 import { User } from "../database/models/User.model.js";
 import {
-  ConversationNote,
+  ConversationCard,
   findConvesationByTwoUsers,
 } from "../sockets/conversations.js";
-import { Op } from "@sequelize/core";
+import Sequelize, { Op } from "@sequelize/core";
 import { Room } from "../database/models/Room.model.js";
 import { Message } from "../database/models/Message.model.js";
 import { UsersConversation } from "../database/models/UsersConversation.model.js";
@@ -32,16 +32,29 @@ router.get("/all", validateTokenApi, async (req, res) => {
     const user = await User.findByPk(id);
     const conversations = await user?.getConversations({
       include: [
-        { model: Message },
+        {
+          model: Message,
+          include: { association: "user" },
+          order: [["createdAt", "DESC"]],
+          separate: true,
+
+          limit: 1,
+        },
         { model: Room },
         { model: User, where: { id: { [Op.ne]: id } } },
       ],
-      order: [[Message, "createdAt", "DESC"]],
     });
 
     if (conversations) {
-      const conversatiosnNote = conversations.map(
-        (conversation) => new ConversationNote(conversation)
+      //sorting by myself since applying limit to getConversation messes up with  DB and i get an error "messages.createdAt" does not exist
+      const sortedConversations = conversations.sort((a, b) => {
+        return a.messages && b.messages
+          ? b.messages[0].createdAt.getTime() -
+              a.messages[0].createdAt.getTime()
+          : 0;
+      });
+      const conversatiosnNote = sortedConversations.map(
+        (conversation) => new ConversationCard(conversation)
       );
       res.status(200).send(conversatiosnNote);
     }

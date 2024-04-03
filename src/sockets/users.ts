@@ -1,3 +1,4 @@
+import { Op } from "@sequelize/core";
 import { User } from "../database/models/User.model.js";
 import { TUserSockets } from "../types/local/messaging.js";
 import { CustomSocket } from "../types/local/socketIo.js";
@@ -14,11 +15,24 @@ export const sendActiveUsers = async (
     );
     Object.keys(userSockets).forEach(async (userId) => {
       const otherUsers = users.filter((user) => user?.id !== Number(userId));
+      console.log("thisisusers:", otherUsers);
       if (id === Number(userId)) {
-        socket.emit("users", otherUsers);
+        socket.emit("activeUsers", otherUsers);
       } else {
-        socket.to(userSockets[userId]).emit("users", otherUsers);
+        socket.to(userSockets[userId]).emit("activeUsers", otherUsers);
       }
     });
+    return users.map((user) => (user ? user.id : 0));
   }
+};
+
+export const sendUsers = async (
+  socket: CustomSocket,
+  userSockets: TUserSockets
+) => {
+  const userIds = Object.keys(userSockets).map((key) => Number(key));
+  const unactiveUsers = await User.findAll({
+    where: { id: { [Op.notIn]: userIds } },
+  });
+  socket.emit("users", unactiveUsers);
 };
