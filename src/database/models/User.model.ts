@@ -14,6 +14,7 @@ import {
   NotNull,
   BelongsToMany,
   HasMany,
+  Default,
 } from "@sequelize/core/decorators-legacy";
 import { Room } from "./Room.model.js";
 import { Message } from "./Message.model.js";
@@ -35,6 +36,14 @@ export class User extends Model<
   @Attribute(DataTypes.STRING)
   @NotNull
   declare password: string;
+
+  @Attribute(DataTypes.BOOLEAN)
+  @NotNull
+  @Default(false)
+  declare active: boolean;
+
+  @Attribute(DataTypes.DATE)
+  declare lastActive: Date;
 
   @HasMany(() => Message, "userId")
   declare message: NonAttribute<Message[]>;
