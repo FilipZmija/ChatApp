@@ -16,7 +16,12 @@ import {
   sendMessage,
 } from "./messages.js";
 import { Room } from "../database/models/Room.model.js";
-import { sendActiveUsers, sendUsers } from "./users.js";
+import {
+  connectUser,
+  disconnectUser,
+  sendActiveUsers,
+  sendUsers,
+} from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
 
@@ -60,6 +65,7 @@ export class ServerSocket {
         where: { id },
         include: [{ model: Room, required: true }],
       });
+      await connectUser(id);
       if (user) {
         user.rooms?.forEach((room) => {
           socket.join("room" + room.id);
@@ -75,19 +81,19 @@ export class ServerSocket {
         if (userSockets.length === 0) {
           delete this.users[socket.user.id];
         }
-        console.log("disconext");
-        console.log(userSockets);
-        setTimeout(() => {
-          socket.user &&
-            !this.users[socket.user.id] &&
-            sendActiveUsers(this.users, socket);
+        await disconnectUser(socket.user.id);
+        setTimeout(async () => {
+          if (socket.user && !this.users[socket.user.id]) {
+            await sendActiveUsers(this.users, socket);
+            await sendUsers(this.io, this.users);
+          }
         }, 10000);
       }
     });
     console.log(this.users);
     socket.on("getUsers", async () => {
       await sendActiveUsers(this.users, socket);
-      await sendUsers(socket, this.users);
+      await sendUsers(this.io, this.users);
     });
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {
