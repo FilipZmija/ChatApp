@@ -37,6 +37,11 @@ export class User extends Model<
   @NotNull
   declare password: string;
 
+  @Attribute(DataTypes.STRING)
+  @NotNull
+  @Default("user")
+  declare type: string;
+
   @Attribute(DataTypes.BOOLEAN)
   @NotNull
   @Default(false)
