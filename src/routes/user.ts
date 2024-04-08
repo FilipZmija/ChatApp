@@ -92,9 +92,14 @@ router.get("/all", validateTokenApi, async (req: Request, res: Response) => {
 router.get(
   "/search",
   validateTokenApi,
-  async (req: Request<{}, {}, {}, { name: string }>, res: Response) => {
+  async (
+    req: Request<{}, {}, {}, { name: string; page: string }>,
+    res: Response
+  ) => {
     const { name }: { name: string } = req.query;
-    console.log(name);
+    const { page }: { page: string } = req.query;
+    const limit = 15;
+    const offset = (Number(page) - 1) * limit || 0;
     try {
       const users = name
         ? await User.findAll({
@@ -102,6 +107,8 @@ router.get(
               name: { [Op.substring]: name },
               id: { [Op.ne]: req.user.id },
             },
+            limit,
+            offset,
             attributes: { exclude: ["password"] },
           })
         : await User.findAll({
