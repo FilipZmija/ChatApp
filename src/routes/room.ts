@@ -48,7 +48,7 @@ router.post("/create", validateTokenApi, async (req, res) => {
   const { id } = req.user;
   try {
     const name: string = req.body.name;
-    const room = await Room.create({ name: name });
+    const room = await Room.create({ name: name, type: "room" });
     await room.addUser(id);
     res.status(200).json({ room });
   } catch (err) {
