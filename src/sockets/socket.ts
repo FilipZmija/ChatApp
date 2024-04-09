@@ -18,6 +18,8 @@ import {
 import { enterChat, leaveChat, sendActiveUsers, sendUsers } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
+import { Conversation } from "../database/models/Conversation.model.js";
+import { Message } from "../database/models/Message.model.js";
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -78,6 +80,46 @@ export class ServerSocket {
       await sendActiveUsers(socket);
       await sendUsers(socket);
     });
+
+    socket.on(
+      "readMessages",
+      async ({
+        conversationId,
+        messageId,
+      }: {
+        conversationId: number;
+        messageId: number;
+      }) => {
+        const conversation = await Conversation.findByPk(conversationId, {
+          include: [{ model: Message, include: [User] }, User],
+        });
+
+        if (conversation && socket.user) {
+          const { id } = socket.user;
+          conversation.messages?.forEach(async (message) => {
+            if (
+              id !== message.user.id &&
+              message.status === "delivered" &&
+              message.id <= messageId
+            ) {
+              message.status = "seen";
+              await message.save();
+            }
+          });
+          conversation.users?.forEach((user) => {
+            const userSockets = this.users[user.id];
+            if (userSockets) {
+              userSockets.forEach((socketId) => {
+                console.log(socketId);
+                socket
+                  .to(socketId)
+                  .emit("readMessages", { conversationId, messageId });
+              });
+            }
+          });
+        }
+      }
+    );
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {
       if (socket.user) {
