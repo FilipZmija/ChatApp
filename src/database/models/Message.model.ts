@@ -40,6 +40,9 @@ export class Message extends Model<
   @NotNull
   declare content: string;
 
+  @Attribute(DataTypes.STRING)
+  declare status: string;
+
   @BelongsTo(() => User, "userId")
   declare user: NonAttribute<User>;
 

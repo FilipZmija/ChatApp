@@ -15,13 +15,7 @@ import {
   sendConfirmationMessage,
   sendMessage,
 } from "./messages.js";
-import { Room } from "../database/models/Room.model.js";
-import {
-  connectUser,
-  disconnectUser,
-  sendActiveUsers,
-  sendUsers,
-} from "./users.js";
+import { enterChat, leaveChat, sendActiveUsers, sendUsers } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
 
@@ -56,21 +50,11 @@ export class ServerSocket {
   private startListeners = async (socket: CustomSocket) => {
     if (socket.user) {
       const { id }: { id: number } = socket.user;
-
       this.users[id]
         ? this.users[id].push(socket.id)
         : (this.users[id] = [socket.id]);
-
-      const user = await User.findOne({
-        where: { id },
-        include: [{ model: Room, required: true }],
-      });
-      await connectUser(id);
-      if (user) {
-        user.rooms?.forEach((room) => {
-          socket.join("room" + room.id);
-        });
-      }
+      const user = await enterChat(socket, id);
+      if (user) this.io.emit("user", user);
     }
 
     socket.on("disconnect", async () => {
@@ -81,19 +65,18 @@ export class ServerSocket {
         if (userSockets.length === 0) {
           delete this.users[socket.user.id];
         }
-        await disconnectUser(socket.user.id);
         setTimeout(async () => {
           if (socket.user && !this.users[socket.user.id]) {
-            await sendActiveUsers(this.users, socket);
-            await sendUsers(this.io, this.users);
+            const user = await leaveChat(socket.user.id);
+            if (user) this.io.emit("user", user);
           }
         }, 10000);
       }
     });
-    console.log(this.users);
+
     socket.on("getUsers", async () => {
-      await sendActiveUsers(this.users, socket);
-      await sendUsers(this.io, this.users);
+      await sendActiveUsers(socket);
+      await sendUsers(socket);
     });
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {

@@ -33,11 +33,16 @@ export const findConvesationByTwoUsers = async (ids: number[]) => {
       where: {
         "$users.id$": ids[1],
       },
-      include: ["users", "messages"],
+      include: [
+        "users",
+        { model: Message, limit: 30, order: [["createdAt", "DESC"]] },
+      ],
     });
-    if (existingConvsation[0])
+    if (existingConvsation[0]) {
+      existingConvsation[0].messages =
+        existingConvsation[0].messages?.reverse();
       return { recipient: user, conversation: existingConvsation[0] };
-    else return { recipient: user, conversation: null };
+    } else return { recipient: user, conversation: null };
   }
 };
 

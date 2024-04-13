@@ -18,7 +18,7 @@ export class MessageInstance {
   message: {
     type: "message" | "system";
     content: string;
-    status: "sent" | "delivered" | "read";
+    status: "sent" | "delivered" | "read" | "failed to deliver";
     id?: number;
   };
   sendTo: string | string[] | undefined;
@@ -75,12 +75,14 @@ export class MessageInstance {
           userId,
           conversationId,
           content,
+          status: "delivered",
         });
         this.message.id = savedMessage.id;
         this.message.status = "delivered";
         return { status: true, message: "Message saved successfully" };
       } catch (e) {
         console.error(e);
+        this.message.status = "failed to deliver";
         return { status: false, message: "Couldn't add message to DB." };
       }
     } else {
