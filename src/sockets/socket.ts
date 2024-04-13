@@ -12,10 +12,11 @@ import {
 } from "../types/local/messaging.js";
 import {
   MessageInstance,
+  readMessageConfirmation,
   sendConfirmationMessage,
   sendMessage,
 } from "./messages.js";
-import { enterChat, leaveChat, sendActiveUsers, sendUsers } from "./users.js";
+import { enterChat, leaveChat } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
 import { Conversation } from "../database/models/Conversation.model.js";
@@ -56,7 +57,13 @@ export class ServerSocket {
         ? this.users[id].push(socket.id)
         : (this.users[id] = [socket.id]);
       const user = await enterChat(socket, id);
-      if (user) this.io.emit("user", user);
+      const keys = Object.keys(this.users);
+      const sendTo = keys
+        .filter((key) => key !== id.toString())
+        .map((key) => this.users[key])
+        .flat();
+
+      if (user) socket.to(sendTo).emit("user", user);
     }
 
     socket.on("disconnect", async () => {
@@ -70,15 +77,10 @@ export class ServerSocket {
         setTimeout(async () => {
           if (socket.user && !this.users[socket.user.id]) {
             const user = await leaveChat(socket.user.id);
-            if (user) this.io.emit("user", user);
+            if (user) socket.broadcast.emit("user", user);
           }
         }, 10000);
       }
-    });
-
-    socket.on("getUsers", async () => {
-      await sendActiveUsers(socket);
-      await sendUsers(socket);
     });
 
     socket.on(
@@ -93,31 +95,13 @@ export class ServerSocket {
         const conversation = await Conversation.findByPk(conversationId, {
           include: [{ model: Message, include: [User] }, User],
         });
-
-        if (conversation && socket.user) {
-          const { id } = socket.user;
-          conversation.messages?.forEach(async (message) => {
-            if (
-              id !== message.user.id &&
-              message.status === "delivered" &&
-              message.id <= messageId
-            ) {
-              message.status = "seen";
-              await message.save();
-            }
-          });
-          conversation.users?.forEach((user) => {
-            const userSockets = this.users[user.id];
-            if (userSockets) {
-              userSockets.forEach((socketId) => {
-                console.log(socketId);
-                socket
-                  .to(socketId)
-                  .emit("readMessages", { conversationId, messageId });
-              });
-            }
-          });
-        }
+        if (conversation)
+          await readMessageConfirmation(
+            socket,
+            this.users,
+            conversation,
+            messageId
+          );
       }
     );
 

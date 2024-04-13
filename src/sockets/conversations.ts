@@ -1,7 +1,15 @@
 import { Conversation } from "../database/models/Conversation.model.js";
 import { Message } from "../database/models/Message.model.js";
+import { Room } from "../database/models/Room.model.js";
 import { User } from "../database/models/User.model.js";
 import { IConversation, TUser } from "../types/local/messaging.js";
+interface ActiveRoom {
+  id: number;
+  name: string;
+  type: string;
+  active?: boolean;
+  lastActive?: Date;
+}
 
 export class ConversationCard implements IConversation {
   id: number;
@@ -9,19 +17,45 @@ export class ConversationCard implements IConversation {
   type: "room" | "user";
   name?: string;
   lastMessage?: Message;
+  recipient: ActiveRoom;
+  usersIds?: number[];
   constructor(conversation: Conversation) {
     this.id = conversation.id;
     this.type = conversation.type;
+    this.recipient = { id: 0, name: "", type: "" };
+    this.usersIds = conversation.users?.map((user) => user.id);
     if (conversation.messages) {
       this.lastMessage = conversation.messages[0];
     }
-
     if (conversation.type === "user" && conversation.users) {
       this.name = conversation.users[0].name;
       this.childId = conversation.users[0].id;
+      this.recipient = conversation.users[0];
     } else {
       this.name = conversation.room.name;
       this.childId = conversation.room.id;
+
+      const isActive =
+        conversation.users?.findIndex((user) => user.active) !== -1;
+      const lastActive =
+        conversation.type === "room"
+          ? conversation.users?.reduce((acc, curr) => {
+              if (curr.lastActive && acc.lastActive) {
+                if (curr.lastActive > acc.lastActive) {
+                  return curr;
+                } else return acc;
+              } else if (acc.lastActive) {
+                return acc;
+              } else {
+                return curr;
+              }
+            }).lastActive
+          : undefined;
+      this.recipient = {
+        ...conversation.room.dataValues,
+        active: isActive,
+        lastActive,
+      };
     }
   }
 }
@@ -32,10 +66,16 @@ export const findConvesationByTwoUsers = async (ids: number[]) => {
     const existingConvsation = await user.getConversations({
       where: {
         "$users.id$": ids[1],
+        type: "user",
       },
       include: [
         "users",
-        { model: Message, limit: 30, order: [["createdAt", "DESC"]] },
+        {
+          model: Message,
+          limit: 30,
+          order: [["createdAt", "DESC"]],
+          include: [{ model: User, attributes: { exclude: ["password"] } }],
+        },
       ],
     });
     if (existingConvsation[0]) {
