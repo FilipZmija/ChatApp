@@ -9,6 +9,7 @@ export const askToJoinRoom = (
   conversation: IConversation,
   socket: CustomSocket
 ) => {
+  console.log("this", message.sendTo);
   message.saveMessage();
   if (message.sendTo) {
     socket.to(message.sendTo).emit("joinRoom", conversation);
@@ -27,6 +28,7 @@ export const createRoom = async (
     const room = await Room.create({
       name: roomName,
       conversationId: conversation.id,
+      type: "room",
     });
     await room.addUsers([userId, ...users]);
     await conversation.addUsers([userId, ...users]);

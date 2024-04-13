@@ -8,10 +8,19 @@ import {
 import { CustomSocket } from "../types/local/socketIo.js";
 import { Message } from "../database/models/Message.model.js";
 import { ISucessError } from "../types/local/Info.js";
+import { User } from "../database/models/User.model.js";
+import { Op } from "@sequelize/core";
+import { ConversationCard } from "./conversations.js";
+import { Room } from "../database/models/Room.model.js";
 
 export class MessageInstance {
   to: IConversation;
-  message: { type: "message" | "system"; content: string; id?: number };
+  message: {
+    type: "message" | "system";
+    content: string;
+    status: "sent" | "delivered" | "read" | "failed to deliver";
+    id?: number;
+  };
   sendTo: string | string[] | undefined;
   from: TUser;
 
@@ -20,6 +29,7 @@ export class MessageInstance {
     this.message = message.message;
     this.sendTo = undefined;
     this.from = user;
+    this.message.status = "sent";
   }
   updateRecipientsId(id: number) {
     this.to.id = id;
@@ -30,10 +40,19 @@ export class MessageInstance {
     users?: number[] | Conversation
   ) {
     const { type, childId, id } = this.to;
+    const conversation = await Conversation.findByPk(id, {
+      include: [
+        { model: User, where: { [Op.not]: { id: this.from.id } } },
+        { model: Room },
+      ],
+    });
+
+    const conversationCard = conversation
+      ? new ConversationCard(conversation)
+      : null;
     if (type === "room" && typeof users === "undefined") {
       this.sendTo = "room" + childId;
     } else if (type === "user" && typeof users === "undefined") {
-      const conversation = await Conversation.findByPk(id);
       if (conversation) {
         const users = await conversation.getUsers();
         const ids = users.map((user) => user.id);
@@ -43,6 +62,7 @@ export class MessageInstance {
       this.sendTo = users.map((id) => recipients[id]).flat();
       console.log(this.sendTo);
     }
+    return conversationCard;
   }
 
   async saveMessage(): Promise<ISucessError> {
@@ -55,11 +75,14 @@ export class MessageInstance {
           userId,
           conversationId,
           content,
+          status: "delivered",
         });
         this.message.id = savedMessage.id;
+        this.message.status = "delivered";
         return { status: true, message: "Message saved successfully" };
       } catch (e) {
         console.error(e);
+        this.message.status = "failed to deliver";
         return { status: false, message: "Couldn't add message to DB." };
       }
     } else {
@@ -83,9 +106,22 @@ export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
   } else {
     eventName += message.to.childId;
   }
-
   if (typeof message.sendTo !== "undefined") {
     socket.to(message.sendTo).emit("message", message.messageBody);
     socket.to(message.sendTo).emit(eventName, message.messageBody);
+  }
+};
+
+export const sendConfirmationMessage = (
+  message: MessageInstance,
+  conversation: ConversationCard,
+  socket: CustomSocket,
+  status: boolean
+) => {
+  if (status) {
+    const eventName = "confirmation" + message.to.type + message.to.childId;
+    socket.emit(eventName, { message: message.messageBody, conversation });
+  } else {
+    socket.emit("error", { message: "Couldn't send message" });
   }
 };

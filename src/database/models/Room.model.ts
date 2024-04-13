@@ -20,6 +20,7 @@ import {
   BeforeCreate,
   AfterCreate,
   BelongsTo,
+  Default,
 } from "@sequelize/core/decorators-legacy";
 import { User } from "./User.model.js";
 import { Conversation } from "./Conversation.model.js";
@@ -36,6 +37,11 @@ export class Room extends Model<
   @Attribute(DataTypes.STRING)
   @NotNull
   declare name: string;
+
+  @Attribute(DataTypes.STRING)
+  @NotNull
+  @Default("room")
+  declare type: string;
 
   @Attribute(DataTypes.INTEGER)
   declare conversationId: number | null;

@@ -1,3 +1,5 @@
+import { Message } from "../../database/models/Message.model.ts";
+
 export interface TUserSockets {
   [id: string]: string[];
 }
@@ -7,6 +9,7 @@ export interface IConversation {
   childId: number;
   type: "room" | "user";
   name?: string;
+  lastMessage?: Message;
 }
 
 export interface TUser {
@@ -16,13 +19,11 @@ export interface TUser {
 
 export interface IMessage {
   to: IConversation;
-  message: { type: "message" | "system"; content: string };
-}
-
-export interface ISimpleMessage {
-  type: "message" | "system";
-  content: string;
-  id: number;
+  message: {
+    type: "message" | "system";
+    content: string;
+    status: "sent" | "delivered" | "read";
+  };
 }
 
 export interface IRoomCreationData {

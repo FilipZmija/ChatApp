@@ -3,7 +3,7 @@ import { Message } from "../database/models/Message.model.js";
 import { User } from "../database/models/User.model.js";
 import { IConversation, TUser } from "../types/local/messaging.js";
 
-export class ConversationNote implements IConversation {
+export class ConversationCard implements IConversation {
   id: number;
   childId: number;
   type: "room" | "user";
@@ -12,7 +12,6 @@ export class ConversationNote implements IConversation {
   constructor(conversation: Conversation) {
     this.id = conversation.id;
     this.type = conversation.type;
-
     if (conversation.messages) {
       this.lastMessage = conversation.messages[0];
     }
@@ -34,11 +33,16 @@ export const findConvesationByTwoUsers = async (ids: number[]) => {
       where: {
         "$users.id$": ids[1],
       },
-      include: ["users", "messages"],
+      include: [
+        "users",
+        { model: Message, limit: 30, order: [["createdAt", "DESC"]] },
+      ],
     });
-    if (existingConvsation[0])
+    if (existingConvsation[0]) {
+      existingConvsation[0].messages =
+        existingConvsation[0].messages?.reverse();
       return { recipient: user, conversation: existingConvsation[0] };
-    else return { recipient: user, conversation: null };
+    } else return { recipient: user, conversation: null };
   }
 };
 

@@ -17,7 +17,13 @@ router.post("/register", async (req, res) => {
     const user = await User.findOne({ where: { name } });
     if (!user) {
       const hash = await bcrypt.hash(password, 10);
-      await User.create({ name, password: hash });
+      await User.create({
+        name,
+        password: hash,
+        active: false,
+        type: "user",
+        lastActive: new Date(),
+      });
       res.status(200).json({ message: "You have registered succesfully" });
     } else {
       res.status(400).json({ message: "User with this name already exists" });
@@ -82,5 +88,45 @@ router.get("/all", validateTokenApi, async (req: Request, res: Response) => {
     res.status(400).json({ e });
   }
 });
+
+router.get(
+  "/search",
+  validateTokenApi,
+  async (
+    req: Request<{}, {}, {}, { name: string; page: string }>,
+    res: Response
+  ) => {
+    const { name }: { name: string } = req.query;
+    const { page }: { page: string } = req.query;
+    const limit = 15;
+    const offset = (Number(page) - 1) * limit || 0;
+    try {
+      const users = name
+        ? await User.findAll({
+            where: {
+              name: { [Op.substring]: name },
+              id: { [Op.ne]: req.user.id },
+            },
+            limit,
+            offset,
+            attributes: { exclude: ["password"] },
+          })
+        : await User.findAll({
+            where: {
+              id: { [Op.ne]: req.user.id },
+            },
+            attributes: { exclude: ["password"] },
+          });
+
+      if (users) {
+        res.status(200).json({ users });
+      } else {
+        res.status(404).json({ message: "No users found" });
+      }
+    } catch (e) {
+      res.status(400).json({ e });
+    }
+  }
+);
 
 export default router;

@@ -10,9 +10,12 @@ import {
   TUser,
   TUserSockets,
 } from "../types/local/messaging.js";
-import { MessageInstance, sendMessage } from "./messages.js";
-import { Room } from "../database/models/Room.model.js";
-import { sendActiveUsers } from "./users.js";
+import {
+  MessageInstance,
+  sendConfirmationMessage,
+  sendMessage,
+} from "./messages.js";
+import { enterChat, leaveChat, sendActiveUsers, sendUsers } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
 
@@ -47,20 +50,11 @@ export class ServerSocket {
   private startListeners = async (socket: CustomSocket) => {
     if (socket.user) {
       const { id }: { id: number } = socket.user;
-
       this.users[id]
         ? this.users[id].push(socket.id)
         : (this.users[id] = [socket.id]);
-
-      const user = await User.findOne({
-        where: { id },
-        include: [{ model: Room, required: true }],
-      });
-      if (user) {
-        user.rooms?.forEach((room) => {
-          socket.join("room" + room.id);
-        });
-      }
+      const user = await enterChat(socket, id);
+      if (user) this.io.emit("user", user);
     }
 
     socket.on("disconnect", async () => {
@@ -71,18 +65,18 @@ export class ServerSocket {
         if (userSockets.length === 0) {
           delete this.users[socket.user.id];
         }
-        console.log("disconext");
-        console.log(userSockets);
-        setTimeout(() => {
-          socket.user &&
-            !this.users[socket.user.id] &&
-            sendActiveUsers(this.users, socket);
-        }, 2000);
+        setTimeout(async () => {
+          if (socket.user && !this.users[socket.user.id]) {
+            const user = await leaveChat(socket.user.id);
+            if (user) this.io.emit("user", user);
+          }
+        }, 10000);
       }
     });
-    console.log(this.users);
-    socket.on("getUsers", () => {
-      sendActiveUsers(this.users, socket);
+
+    socket.on("getUsers", async () => {
+      await sendActiveUsers(socket);
+      await sendUsers(socket);
     });
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {
@@ -102,11 +96,12 @@ export class ServerSocket {
             message: {
               type: "system",
               content: `${socket.user.name} created a group chat`,
+              status: "sent",
             },
           };
           const user: TUser = { id, name: name };
           const message = new MessageInstance(creationMessage, user);
-          message.setRecipient(this.users, users);
+          await message.setRecipient(this.users, users);
           askToJoinRoom(message, conversation, socket);
         } else {
           socket.emit("error", {
@@ -116,8 +111,8 @@ export class ServerSocket {
       }
     });
 
-    socket.on("joinRoom", async (data) => {
-      socket.join("room" + data.id);
+    socket.on("joinRoom", async (childId) => {
+      socket.join("room" + childId);
     });
 
     socket.on("sendMessage", async (recivedMessage: IMessage) => {
@@ -137,10 +132,11 @@ export class ServerSocket {
             console.error(e);
           }
         }
-        await message.setRecipient(this.users);
-        await message.saveMessage();
-        console.log(message);
-
+        const conversation = await message.setRecipient(this.users);
+        const { status } = await message.saveMessage();
+        if (conversation) {
+          sendConfirmationMessage(message, conversation, socket, status);
+        }
         sendMessage(message, socket);
       }
     });
