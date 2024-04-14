@@ -26,10 +26,11 @@ app.use("/user", user);
 app.use("/room", room);
 app.use("/conversation", conversation);
 app.use("/messages", messages);
-(async () => await initUsers(100))();
+// (async () => await initUsers(100))();
 (async () => {
   try {
-    await sequelize.sync();
+    const sequelizes = await sequelize();
+    await sequelizes.sync();
     server.listen(process.env.PORT, () =>
       console.log(`Listening on port ${process.env.PORT}`)
     );
