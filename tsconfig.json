@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "es2015",
+    "moduleResolution": "Bundler",
     "experimentalDecorators": true,
     "strict": true,
     "target": "ES2020",
