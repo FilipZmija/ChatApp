@@ -42,13 +42,15 @@ router.post("/login", async (req, res) => {
     const hashPassword = await bcrypt.compare(password, user.password);
     if (!hashPassword)
       return res.status(400).json({ message: "Invalid password" });
-    const accessToken = createToken(user);
-    res.json({
-      message: "User logged in successfully",
-      accessToken: accessToken,
-      name: user.name,
-      id: user.id,
-    });
+    else {
+      const accessToken = createToken(user);
+      res.json({
+        message: "User logged in successfully",
+        accessToken: accessToken,
+        name: user.name,
+        id: user.id,
+      });
+    }
   } catch (e) {
     console.error(e);
     res
@@ -73,21 +75,84 @@ router.get("/data", validateTokenApi, async (req: Request, res: Response) => {
   }
 });
 
-router.get("/all", validateTokenApi, async (req: Request, res: Response) => {
-  try {
-    const users = await User.findAll({
-      where: { id: { [Op.ne]: req.user.id } },
-      attributes: { exclude: ["password"] },
-    });
-    if (users) {
-      res.status(200).json({ users });
-    } else {
-      res.status(404).json({ message: "No users exist" });
+router.get(
+  "/all",
+  validateTokenApi,
+  async (req: Request<{}, {}, {}, { page: string }>, res: Response) => {
+    try {
+      const { page }: { page: string } = req.query;
+      const limit = 20;
+      const offset = (Number(page) - 1) * limit || 0;
+      const users = await User.findAll({
+        where: { id: { [Op.ne]: req.user.id } },
+        attributes: { exclude: ["password"] },
+        limit,
+        offset,
+        order: [["lastActive", "DESC"]],
+      });
+      if (users) {
+        res.status(200).json({ users });
+      } else {
+        res.status(404).json({ message: "No users exist" });
+      }
+    } catch (e) {
+      res.status(400).json({ e });
     }
-  } catch (e) {
-    res.status(400).json({ e });
   }
-});
+);
+
+router.get(
+  "/all/active",
+  validateTokenApi,
+  async (req: Request<{}, {}, {}, { page: string }>, res: Response) => {
+    const { page }: { page: string } = req.query;
+    const limit = 10;
+    const offset = (Number(page) - 1) * limit || 0;
+    try {
+      const usersActive = await User.findAll({
+        where: { id: { [Op.ne]: req.user.id }, active: true },
+        attributes: { exclude: ["password"] },
+        offset,
+        limit,
+        order: [["lastActive", "DESC"]],
+      });
+
+      if (usersActive) {
+        res.status(200).json({ usersActive });
+      } else {
+        res.status(404).json({ message: "No users exist" });
+      }
+    } catch (e) {
+      res.status(400).json({ e });
+    }
+  }
+);
+
+router.get(
+  "/all/unactive",
+  validateTokenApi,
+  async (req: Request<{}, {}, {}, { page: string }>, res: Response) => {
+    const { page }: { page: string } = req.query;
+    const limit = 10;
+    const offset = (Number(page) - 1) * limit || 0;
+    try {
+      const usersUnactive = await User.findAll({
+        where: { id: { [Op.ne]: req.user.id }, active: false },
+        attributes: { exclude: ["password"] },
+        offset,
+        limit,
+        order: [["lastActive", "DESC"]],
+      });
+      if (usersUnactive) {
+        res.status(200).json({ usersUnactive });
+      } else {
+        res.status(404).json({ message: "No users exist" });
+      }
+    } catch (e) {
+      res.status(400).json({ e });
+    }
+  }
+);
 
 router.get(
   "/search",

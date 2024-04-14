@@ -107,6 +107,7 @@ export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
     eventName += message.to.childId;
   }
   if (typeof message.sendTo !== "undefined") {
+    console.log(message.sendTo);
     socket.to(message.sendTo).emit("message", message.messageBody);
     socket.to(message.sendTo).emit(eventName, message.messageBody);
   }
@@ -123,5 +124,38 @@ export const sendConfirmationMessage = (
     socket.emit(eventName, { message: message.messageBody, conversation });
   } else {
     socket.emit("error", { message: "Couldn't send message" });
+  }
+};
+
+export const readMessageConfirmation = async (
+  socket: CustomSocket,
+  users: TUserSockets,
+  conversation: Conversation,
+  messageId: number
+) => {
+  if (conversation && socket.user) {
+    const { id } = socket.user;
+    conversation.messages?.forEach(async (message) => {
+      if (
+        id !== message.user.id &&
+        message.status === "delivered" &&
+        message.id <= messageId
+      ) {
+        message.status = "seen";
+        await message.save();
+      }
+    });
+    conversation.users?.forEach((user) => {
+      const userSockets = users[user.id];
+      if (userSockets) {
+        userSockets.forEach((socketId) => {
+          console.log(socketId);
+          socket.to(socketId).emit("readMessages", {
+            conversationId: conversation.id,
+            messageId,
+          });
+        });
+      }
+    });
   }
 };
