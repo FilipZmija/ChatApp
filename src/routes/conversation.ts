@@ -41,7 +41,6 @@ router.get(
       const latestMessagesSubQuery = `(SELECT id FROM Messages AS m WHERE m.conversationId = "Conversation"."id" ORDER BY m.createdAt DESC LIMIT 1)`;
 
       const conversations = await user?.getConversations({
-        where: { type: "user" },
         include: [
           {
             model: User,
@@ -55,6 +54,7 @@ router.get(
             },
             include: [{ model: User, attributes: { exclude: ["password"] } }],
           },
+          { model: Room },
         ],
         limit,
         offset,
@@ -80,14 +80,29 @@ router.get(
   }
 );
 
-router.get("/room/:id", async (req, res) => {
+router.get("/room/:id", validateTokenApi, async (req, res) => {
   const id = req.params.id;
+  const { id: userId } = req.user;
   try {
     const room = await Room.findByPk(id);
     const conversation = await room?.getConversation({
       include: [
-        { model: Message },
-        { model: User, attributes: { exclude: ["password"] } },
+        {
+          model: Message,
+          include: [
+            {
+              model: User,
+              attributes: { exclude: ["password"] },
+            },
+          ],
+        },
+        {
+          model: User,
+          attributes: {
+            exclude: ["password"],
+          },
+          where: { id: { [Op.ne]: userId } },
+        },
       ],
     });
     res.status(200).send({ conversation, recipient: room });

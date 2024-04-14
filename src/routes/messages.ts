@@ -2,6 +2,8 @@ import express from "express";
 import { Response, Request } from "express";
 import { validateTokenApi, createToken } from "../auth/JWT.js";
 import { Conversation } from "../database/models/Conversation.model.js";
+import { attribute } from "@sequelize/core/_non-semver-use-at-your-own-risk_/expression-builders/attribute.js";
+import { User } from "../database/models/User.model.js";
 const router = express.Router();
 
 router.use(express.json({ limit: "10mb" }));
@@ -27,6 +29,7 @@ router.get(
       const messages = await conversation?.getMessages({
         limit: limit,
         offset: offset,
+        include: [{ model: User, attributes: { exclude: ["password"] } }],
         order: [["createdAt", "DESC"]],
       });
       res.status(200).send({ messages: messages?.reverse() });

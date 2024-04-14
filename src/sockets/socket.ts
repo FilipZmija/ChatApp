@@ -12,12 +12,15 @@ import {
 } from "../types/local/messaging.js";
 import {
   MessageInstance,
+  readMessageConfirmation,
   sendConfirmationMessage,
   sendMessage,
 } from "./messages.js";
-import { enterChat, leaveChat, sendActiveUsers, sendUsers } from "./users.js";
+import { enterChat, leaveChat } from "./users.js";
 import { askToJoinRoom, createRoom } from "./rooms.js";
 import { startConversation } from "./conversations.js";
+import { Conversation } from "../database/models/Conversation.model.js";
+import { Message } from "../database/models/Message.model.js";
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -54,7 +57,13 @@ export class ServerSocket {
         ? this.users[id].push(socket.id)
         : (this.users[id] = [socket.id]);
       const user = await enterChat(socket, id);
-      if (user) this.io.emit("user", user);
+      const keys = Object.keys(this.users);
+      const sendTo = keys
+        .filter((key) => key !== id.toString())
+        .map((key) => this.users[key])
+        .flat();
+
+      if (user) socket.to(sendTo).emit("user", user);
     }
 
     socket.on("disconnect", async () => {
@@ -68,16 +77,33 @@ export class ServerSocket {
         setTimeout(async () => {
           if (socket.user && !this.users[socket.user.id]) {
             const user = await leaveChat(socket.user.id);
-            if (user) this.io.emit("user", user);
+            if (user) socket.broadcast.emit("user", user);
           }
         }, 10000);
       }
     });
 
-    socket.on("getUsers", async () => {
-      await sendActiveUsers(socket);
-      await sendUsers(socket);
-    });
+    socket.on(
+      "readMessages",
+      async ({
+        conversationId,
+        messageId,
+      }: {
+        conversationId: number;
+        messageId: number;
+      }) => {
+        const conversation = await Conversation.findByPk(conversationId, {
+          include: [{ model: Message, include: [User] }, User],
+        });
+        if (conversation)
+          await readMessageConfirmation(
+            socket,
+            this.users,
+            conversation,
+            messageId
+          );
+      }
+    );
 
     socket.on("createRoom", async (roomData: IRoomCreationData) => {
       if (socket.user) {

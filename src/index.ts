@@ -8,6 +8,7 @@ import room from "./routes/room.js";
 import conversation from "./routes/conversation.js";
 import messages from "./routes/messages.js";
 import { ServerSocket } from "./sockets/socket.js";
+import { initUsers } from "./init/users.js";
 
 dotenv.config();
 const app = express();
@@ -25,7 +26,7 @@ app.use("/user", user);
 app.use("/room", room);
 app.use("/conversation", conversation);
 app.use("/messages", messages);
-
+(async () => await initUsers(100))();
 (async () => {
   try {
     await sequelize.sync();
