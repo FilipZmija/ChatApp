@@ -28,7 +28,7 @@ Some of data is ready to be passed via API, such as older messages, conversation
 For storing data this project uses DB. Localy using SQLite, in production server I decided to switch to MySQL. To communicate with DB from the server I decided to use Sequelize ORM which allows to write clean, SQL free code. Created tables store data such as User's data, converations, messages etc. DB diagram can be seen below.
 ![image](https://github.com/FilipZmija/ChatApp-backend/assets/94125339/635d85e3-c189-4a2a-b047-23c7e7a33588)
 
-4. How to run
+### 4. How to run
 Clone repo
 ```
    git clone https://github.com/FilipZmija/ChatApp-backend.git
