@@ -36,10 +36,7 @@ export class ServerSocket {
       pingTimeout: 5000,
       cookie: false,
       cors: {
-        origin:
-          process.env.NODE_ENV === "production"
-            ? process.env.CLIENT_URI
-            : ["http://localhost:3000"],
+        origin: process.env.ORIGIN,
       },
     });
 
