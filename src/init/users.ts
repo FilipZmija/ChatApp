@@ -9,7 +9,7 @@ export const initUsers = async (usersCount: number) => {
     password: hash,
     type: "user",
     lastActive: new Date(),
-    active: true,
+    active: false,
   });
   for (let i = 0; i <= usersCount; i++) {
     const name = faker.internet.userName();

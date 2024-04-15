@@ -26,7 +26,9 @@ app.use("/user", user);
 app.use("/room", room);
 app.use("/conversation", conversation);
 app.use("/messages", messages);
-// (async () => await initUsers(100))();
+(async () => {
+  // setTimeout(async () => await initUsers(100), 1000);
+})();
 (async () => {
   try {
     const sequelizes = await sequelize();
