@@ -106,10 +106,11 @@ export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
   } else {
     eventName += message.to.childId;
   }
+  const eventNameSelf = "user" + message.to.childId;
   if (typeof message.sendTo !== "undefined") {
-    console.log(message.sendTo);
     socket.to(message.sendTo).emit("message", message.messageBody);
     socket.to(message.sendTo).emit(eventName, message.messageBody);
+    socket.to(message.sendTo).emit(eventNameSelf, message.messageBody);
   }
 };
 
@@ -146,15 +147,16 @@ export const readMessageConfirmation = async (
       }
     });
     conversation.users?.forEach((user) => {
-      const userSockets = users[user.id];
-      if (userSockets) {
-        userSockets.forEach((socketId) => {
-          console.log(socketId);
-          socket.to(socketId).emit("readMessages", {
-            conversationId: conversation.id,
-            messageId,
+      if (user.id !== socket.user?.id) {
+        const userSockets = users[user.id];
+        if (userSockets) {
+          userSockets.forEach((socketId) => {
+            socket.broadcast.to(socketId).emit("readMessages", {
+              conversationId: conversation.id,
+              messageId,
+            });
           });
-        });
+        }
       }
     });
   }

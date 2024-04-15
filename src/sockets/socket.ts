@@ -36,10 +36,7 @@ export class ServerSocket {
       pingTimeout: 5000,
       cookie: false,
       cors: {
-        origin:
-          process.env.NODE_ENV === "production"
-            ? process.env.CLIENT_URI
-            : ["http://localhost:3000"],
+        origin: process.env.ORIGIN,
       },
     });
 
@@ -62,6 +59,7 @@ export class ServerSocket {
         .filter((key) => key !== id.toString())
         .map((key) => this.users[key])
         .flat();
+      console.log(this.users);
 
       if (user) socket.to(sendTo).emit("user", user);
     }
@@ -74,6 +72,8 @@ export class ServerSocket {
         if (userSockets.length === 0) {
           delete this.users[socket.user.id];
         }
+        console.log(this.users);
+
         setTimeout(async () => {
           if (socket.user && !this.users[socket.user.id]) {
             const user = await leaveChat(socket.user.id);
