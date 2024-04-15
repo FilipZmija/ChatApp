@@ -31,15 +31,13 @@ export class ServerSocket {
     ServerSocket.instance = this;
     this.users = {};
     this.io = new Server(server, {
+      path: "/ws",
       serveClient: false,
       pingInterval: 5000,
       pingTimeout: 5000,
       cookie: false,
       cors: {
         origin: "*",
-        methods: ["GET", "POST"],
-        allowedHeaders: ["my-custom-header"],
-        credentials: true,
       },
     });
 
