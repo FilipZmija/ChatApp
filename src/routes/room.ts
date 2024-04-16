@@ -76,7 +76,6 @@ router.post("/join/:roomId", validateTokenApi, async (req, res) => {
 router.post("/asign/:roomId", validateTokenApi, async (req, res) => {
   const { roomId } = req.params;
   const userIds: number[] = req.body.userIds;
-  console.log(userIds);
   try {
     const room = await Room.findOne({ where: { id: roomId } });
     if (room) {
