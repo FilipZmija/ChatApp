@@ -9,7 +9,6 @@ export const askToJoinRoom = (
   conversation: IConversation,
   socket: CustomSocket
 ) => {
-  console.log("this", message.sendTo);
   message.saveMessage();
   if (message.sendTo) {
     socket.to(message.sendTo).emit("joinRoom", conversation);

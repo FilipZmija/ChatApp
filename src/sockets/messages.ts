@@ -60,7 +60,6 @@ export class MessageInstance {
       }
     } else if (Array.isArray(users)) {
       this.sendTo = users.map((id) => recipients[id]).flat();
-      console.log(this.sendTo);
     }
     return conversationCard;
   }

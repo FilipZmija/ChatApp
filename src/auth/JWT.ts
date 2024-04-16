@@ -44,7 +44,6 @@ export const validateTokenSocket = (socket: CustomSocket, next: any) => {
     const accessToken: string = Array.isArray(socket.handshake.auth.token)
       ? socket.handshake.auth.token[0]
       : socket.handshake.auth.token;
-    console.log(socket.handshake.auth.token);
     jwt.verify(accessToken, process.env.SECRET_TOKEN, (err, decoded) => {
       if (err) {
         next(new Error("Invalid token"));
