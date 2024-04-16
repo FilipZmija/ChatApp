@@ -1,7 +1,7 @@
 # Chat app
 
 This repository is part of chatting app project containing frontend and backend implementation. Here you can find fully implemeneted backend application that is ready to be run with corresponding frontend with it. 
-You can try the app here:
+You can try the app here: https://main--filips-chat.netlify.app/
 
 You have a choice of trying test user or creating your own account and logging in. Once logged in user sees main screen, on the left side there is list of exisitng conversations that can be choosen, on the right there is a list of active and unactive users that can be searched via textfield that is placed on top of it. Once conversation or user is choosen a conversation view is displayed with previous messages, info about conversation and possibility of sending a message.
 
