@@ -27,7 +27,7 @@ app.use("/room", room);
 app.use("/conversation", conversation);
 app.use("/messages", messages);
 (async () => {
-  setTimeout(async () => await initUsers(100), 1000);
+  // setTimeout(async () => await initUsers(100), 1000);
 })();
 (async () => {
   try {

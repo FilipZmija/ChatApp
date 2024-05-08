@@ -10,6 +10,7 @@ export interface IConversation {
   type: "room" | "user";
   name?: string;
   lastMessage?: Message;
+  typing: TUser[];
 }
 
 export interface TUser {

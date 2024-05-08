@@ -166,22 +166,15 @@ router.get(
     const limit = 15;
     const offset = (Number(page) - 1) * limit || 0;
     try {
-      const users = name
-        ? await User.findAll({
-            where: {
-              name: { [Op.substring]: name },
-              id: { [Op.ne]: req.user.id },
-            },
-            limit,
-            offset,
-            attributes: { exclude: ["password"] },
-          })
-        : await User.findAll({
-            where: {
-              id: { [Op.ne]: req.user.id },
-            },
-            attributes: { exclude: ["password"] },
-          });
+      const users = await User.findAll({
+        where: {
+          name: { [Op.substring]: name },
+          id: { [Op.ne]: req.user.id },
+        },
+        limit,
+        offset,
+        attributes: { exclude: ["password"] },
+      });
 
       if (users) {
         res.status(200).json({ users });
