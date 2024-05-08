@@ -35,11 +35,9 @@ export class MessageInstance {
     this.to.id = id;
   }
 
-  async setRecipient(
-    recipients: TUserSockets,
-    users?: number[] | Conversation
-  ) {
+  async setRecipient(recipients: TUserSockets, users?: number[]) {
     const { type, childId, id } = this.to;
+    const { id: myId } = this.from;
     const conversation = await Conversation.findByPk(id, {
       include: [
         { model: User, where: { [Op.not]: { id: this.from.id } } },
@@ -50,17 +48,8 @@ export class MessageInstance {
     const conversationCard = conversation
       ? new ConversationCard(conversation)
       : null;
-    if (type === "room" && typeof users === "undefined") {
-      this.sendTo = "room" + childId;
-    } else if (type === "user" && typeof users === "undefined") {
-      if (conversation) {
-        const users = await conversation.getUsers();
-        const ids = users.map((user) => user.id);
-        this.sendTo = ids.map((id) => recipients[id]).flat();
-      }
-    } else if (Array.isArray(users)) {
-      this.sendTo = users.map((id) => recipients[id]).flat();
-    }
+
+    this.sendTo = await getRecipient(type, childId, myId, recipients, users);
     return conversationCard;
   }
 
@@ -97,6 +86,27 @@ export class MessageInstance {
     };
   }
 }
+
+export const getRecipient = async (
+  type: "room" | "user",
+  childId: number,
+  myId: number,
+  recipients: TUserSockets,
+  users?: number[]
+) => {
+  let sendTo: string | string[];
+  if (typeof users === "undefined") {
+    if (type === "room") {
+      sendTo = "room" + childId;
+    } else {
+      const ids = [childId, myId];
+      sendTo = ids.map((id) => recipients[id]).flat();
+    }
+  } else {
+    sendTo = users.map((id) => recipients[id]).flat();
+  }
+  return sendTo;
+};
 
 export const sendMessage = (message: MessageInstance, socket: CustomSocket) => {
   let eventName = message.to.type;

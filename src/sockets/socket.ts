@@ -12,6 +12,7 @@ import {
 } from "../types/local/messaging.js";
 import {
   MessageInstance,
+  getRecipient,
   readMessageConfirmation,
   sendConfirmationMessage,
   sendMessage,
@@ -115,6 +116,7 @@ export class ServerSocket {
             childId: room.id,
             type: "room",
             name: roomName,
+            typing: [],
           };
           const creationMessage: IMessage = {
             to: conversation,
@@ -149,7 +151,8 @@ export class ServerSocket {
           try {
             const conversationData = await startConversation(recipient, user);
             if (typeof conversationData !== "string") {
-              message.updateRecipientsId(conversationData.conversation.id);
+              if (conversationData.conversation.id)
+                message.updateRecipientsId(conversationData.conversation.id);
             } else {
               throw new Error(conversationData);
             }
@@ -165,5 +168,32 @@ export class ServerSocket {
         sendMessage(message, socket);
       }
     });
+    socket.on(
+      "userTyping",
+      async ({ type, id }: { type: "room" | "user"; id: number }) => {
+        if (socket.user) {
+          const { id: myId } = socket.user;
+          const user = await User.findByPk(myId);
+          const sendTo = await getRecipient(type, id, myId, this.users);
+          const eventName = type + "" + myId + "typing";
+          socket.to(sendTo).emit("userTyping", { user, id: myId });
+          socket.to(sendTo).emit(eventName, { user, id: myId });
+        }
+      }
+    );
+    socket.on(
+      "userStopTyping",
+      async ({ type, id }: { type: "room" | "user"; id: number }) => {
+        if (socket.user) {
+          const { id: myId } = socket.user;
+          const user = await User.findByPk(myId);
+          const sendTo = await getRecipient(type, id, myId, this.users);
+          const eventName = type + "" + myId + "stop-typing";
+          console.log(eventName);
+          socket.to(sendTo).emit("userStopTyping", { user, id: myId });
+          socket.to(sendTo).emit(eventName, { user, id: myId });
+        }
+      }
+    );
   };
 }

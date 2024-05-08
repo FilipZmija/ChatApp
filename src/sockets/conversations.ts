@@ -16,6 +16,7 @@ export class ConversationCard implements IConversation {
   childId: number;
   type: "room" | "user";
   name?: string;
+  typing: TUser[];
   lastMessage?: Message;
   recipient: ActiveRoom;
   usersIds?: number[];
@@ -24,6 +25,7 @@ export class ConversationCard implements IConversation {
     this.type = conversation.type;
     this.recipient = { id: 0, name: "", type: "" };
     this.usersIds = conversation.users?.map((user) => user.id);
+    this.typing = [];
     if (conversation.messages) {
       this.lastMessage = conversation.messages[0];
     }
@@ -81,7 +83,12 @@ export const findConvesationByTwoUsers = async (ids: number[]) => {
     if (existingConvsation[0]) {
       existingConvsation[0].messages =
         existingConvsation[0].messages?.reverse();
-      return { recipient: user, conversation: existingConvsation[0] };
+      const conversation: IConversation = {
+        ...existingConvsation[0].dataValues,
+        childId: user.id,
+        typing: [],
+      };
+      return { recipient: user, conversation: conversation };
     } else return { recipient: user, conversation: null };
   }
 };
@@ -89,7 +96,7 @@ export const findConvesationByTwoUsers = async (ids: number[]) => {
 export const startConversation = async (
   recipeint: IConversation,
   user: TUser
-): Promise<{ recipient: User; conversation: Conversation } | string> => {
+): Promise<{ recipient: User; conversation: IConversation } | string> => {
   const { type, childId } = recipeint;
   const { id } = user;
   try {
@@ -99,7 +106,15 @@ export const startConversation = async (
       const conversation = await Conversation.create({ type });
       if (childId) {
         await conversation.addUsers([id, childId]);
-        return { recipient: existingConvsation.recipient, conversation };
+        const fixedConversation: IConversation = {
+          ...conversation,
+          childId,
+          typing: [],
+        };
+        return {
+          recipient: existingConvsation.recipient,
+          conversation: fixedConversation,
+        };
       } else return "Something went wrong";
     } else return "Something went wrong";
   } catch (e) {
